@@ -13,7 +13,6 @@ import (
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
-	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/snowflake"
 )
 
 const (
@@ -160,7 +159,7 @@ func (o *setConnectionOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx.Name = name
-	ts, err := snowflake.TestConnection(cmd.Context(), ctx, secret)
+	ts, err := testConnectionFn(cmd.Context(), ctx, secret)
 	if err != nil {
 		return fmt.Errorf("connection validation failed: %w", err)
 	}

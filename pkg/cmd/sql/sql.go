@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
-	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/snowflake"
 )
 
 func NewSQLCmd() *cobra.Command {
@@ -47,7 +46,7 @@ func (o *sqlOptions) run(cmd *cobra.Command) error {
 		return fmt.Errorf("%s is not set; export it before running SQL", envVar)
 	}
 
-	rows, err := snowflake.RunQuery(cmd.Context(), ctx, credential, stmt)
+	rows, err := runQueryFn(cmd.Context(), ctx, credential, stmt)
 	if err != nil {
 		return fmt.Errorf("query failed: %w", err)
 	}

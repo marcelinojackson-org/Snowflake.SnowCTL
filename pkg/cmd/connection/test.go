@@ -12,7 +12,6 @@ import (
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
-	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/snowflake"
 )
 
 func newTestConnectionCmd() *cobra.Command {
@@ -78,7 +77,7 @@ func (o *testOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s is not set; export it before testing connection %q", envVar, name)
 	}
 
-	ts, err := snowflake.TestConnection(cmd.Context(), connection, credential)
+	ts, err := testConnectionFn(cmd.Context(), connection, credential)
 	if err != nil {
 		return fmt.Errorf("connection failed: %w", err)
 	}
