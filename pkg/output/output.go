@@ -59,21 +59,75 @@ func normalizeRecords(data interface{}) ([]map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var slice []map[string]any
-	if err := json.Unmarshal(raw, &slice); err == nil {
-		return slice, nil
+	var anyData interface{}
+	if err := json.Unmarshal(raw, &anyData); err != nil {
+		return nil, err
 	}
-	var single map[string]any
-	if err := json.Unmarshal(raw, &single); err == nil {
-		return []map[string]any{single}, nil
+	return flattenAny(anyData)
+}
+
+func flattenAny(value interface{}) ([]map[string]any, error) {
+	switch v := value.(type) {
+	case []interface{}:
+		res := make([]map[string]any, 0, len(v))
+		for _, item := range v {
+			m, err := toMap(item)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, m)
+		}
+		return res, nil
+	case map[string]interface{}:
+		if rows, ok := v["rows"].([]interface{}); ok {
+			base := copyMap(v)
+			delete(base, "rows")
+			res := make([]map[string]any, 0, len(rows))
+			for _, row := range rows {
+				m, err := toMap(row)
+				if err != nil {
+					return nil, err
+				}
+				merged := copyMap(base)
+				for k, val := range m {
+					merged[k] = val
+				}
+				res = append(res, merged)
+			}
+			return res, nil
+		}
+		m, err := toMap(v)
+		if err != nil {
+			return nil, err
+		}
+		return []map[string]any{m}, nil
+	default:
+		m, err := toMap(v)
+		if err != nil {
+			return nil, fmt.Errorf("data must be an object or array of objects for csv/tsv output")
+		}
+		return []map[string]any{m}, nil
 	}
-	var rowsWrapper struct {
-		Rows []map[string]any `json:"rows"`
+}
+
+func toMap(value interface{}) (map[string]any, error) {
+	if value == nil {
+		return map[string]any{}, nil
 	}
-	if err := json.Unmarshal(raw, &rowsWrapper); err == nil && len(rowsWrapper.Rows) > 0 {
-		return rowsWrapper.Rows, nil
+	switch v := value.(type) {
+	case map[string]interface{}:
+		return v, nil
+	default:
+		return map[string]any{"value": v}, nil
 	}
-	return nil, fmt.Errorf("data must be an object or array of objects for csv/tsv output")
+}
+
+func copyMap(src map[string]any) map[string]any {
+	dst := make(map[string]any, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
 
 func writeSeparated(w io.Writer, records []map[string]any, sep rune) error {
