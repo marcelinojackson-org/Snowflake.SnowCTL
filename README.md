@@ -96,6 +96,26 @@ secret     = "••••"  # stored exactly as entered
 
 ## CLI usage
 
+### Built-in help
+
+```
+Snowflake DevOps CLI (v0.0.1)
+
+Usage:
+  snowctl <command> [flags]
+
+Commands:
+  completion   Generate shell completion scripts
+  connection   Manage Snowflake connections
+  sql          Execute SQL against the active connection
+
+Flags:
+  -h, --help         Show help
+  -v, --version      Show version
+  -c, --connection   Use a connection
+  -o, --output       Output format
+```
+
 ### Global flags
 
 | Flag | Description |
