@@ -67,6 +67,12 @@ func normalizeRecords(data interface{}) ([]map[string]any, error) {
 	if err := json.Unmarshal(raw, &single); err == nil {
 		return []map[string]any{single}, nil
 	}
+	var rowsWrapper struct {
+		Rows []map[string]any `json:"rows"`
+	}
+	if err := json.Unmarshal(raw, &rowsWrapper); err == nil && len(rowsWrapper.Rows) > 0 {
+		return rowsWrapper.Rows, nil
+	}
 	return nil, fmt.Errorf("data must be an object or array of objects for csv/tsv output")
 }
 
