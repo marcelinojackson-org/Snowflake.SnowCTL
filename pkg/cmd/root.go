@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -64,7 +65,13 @@ func NewRootCmd() *cobra.Command {
 // Execute runs the root snowctl command.
 func Execute() {
 	if err := NewRootCmd().Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		payload := map[string]string{"error": err.Error()}
+		data, marshalErr := json.MarshalIndent(payload, "", "  ")
+		if marshalErr != nil {
+			fmt.Fprintln(os.Stderr, err)
+		} else {
+			fmt.Fprintln(os.Stderr, string(data))
+		}
 		os.Exit(1)
 	}
 }
