@@ -3,7 +3,6 @@ package connectioncmd
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -71,13 +70,11 @@ func (o *testOptions) run(cmd *cobra.Command, args []string) error {
 		connection = ctx
 	}
 
-	envVar := secretEnvVar(connection.AuthMethod)
-	credential := strings.TrimSpace(os.Getenv(envVar))
-	if credential == "" {
-		return fmt.Errorf("%s is not set; export it before testing connection %q", envVar, name)
+	if strings.TrimSpace(connection.Secret) == "" {
+		return fmt.Errorf("connection %q has no stored credential. Re-run 'snowctl connection set %s' to store one.", name, name)
 	}
 
-	ts, err := testConnectionFn(cmd.Context(), connection, credential)
+	ts, err := testConnectionFn(cmd.Context(), connection)
 	if err != nil {
 		return fmt.Errorf("connection failed: %w", err)
 	}
@@ -86,7 +83,6 @@ func (o *testOptions) run(cmd *cobra.Command, args []string) error {
 		"connection": name,
 		"account":    connection.Account,
 		"user":       connection.User,
-		"authEnv":    envVar,
 		"serverTime": ts,
 		"currentSet": false,
 	}

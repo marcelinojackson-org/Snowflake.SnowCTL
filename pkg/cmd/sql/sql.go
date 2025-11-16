@@ -2,7 +2,6 @@ package sqlcmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -40,13 +39,11 @@ func (o *sqlOptions) run(cmd *cobra.Command) error {
 		return err
 	}
 
-	envVar := secretEnvVar(ctx.AuthMethod)
-	credential := strings.TrimSpace(os.Getenv(envVar))
-	if credential == "" {
-		return fmt.Errorf("%s is not set; export it before running SQL", envVar)
+	if strings.TrimSpace(ctx.Secret) == "" {
+		return fmt.Errorf("connection %q has no stored credential. Re-run 'snowctl connection set %s' to store one.", ctx.Name, ctx.Name)
 	}
 
-	rows, err := runQueryFn(cmd.Context(), ctx, credential, stmt)
+	rows, err := runQueryFn(cmd.Context(), ctx, stmt)
 	if err != nil {
 		return fmt.Errorf("query failed: %w", err)
 	}
@@ -57,13 +54,6 @@ func (o *sqlOptions) run(cmd *cobra.Command) error {
 		Rows:       rows,
 	}
 	return output.Print(cmd, resp)
-}
-
-func secretEnvVar(method string) string {
-	if method == "pat" {
-		return "SNOWFLAKE_PAT"
-	}
-	return "SNOWFLAKE_PASSWORD"
 }
 
 type queryResponse struct {

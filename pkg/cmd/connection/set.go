@@ -29,7 +29,7 @@ func newSetConnectionCmd() *cobra.Command {
 		Short: "Create or update a Snowflake connection",
 		Args:  cobra.MaximumNArgs(1),
 		Long: `Interactively collect Snowflake connection details and persist them under ~/.snowctl/connections.
-Secrets such as passwords or PATs are never stored; use SNOWFLAKE_PASSWORD or SNOWFLAKE_PAT instead.`,
+Secrets such as passwords or PATs are stored with each connection, so you don't have to manage environment variables per connection.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return opts.run(cmd, args)
 		},
@@ -46,6 +46,7 @@ Secrets such as passwords or PATs are never stored; use SNOWFLAKE_PASSWORD or SN
 	cmd.Flags().StringVar(&opts.authMethod, "auth-method", "", "Authentication method to use (password or pat)")
 	cmd.Flags().BoolVar(&opts.makeCurrent, "make-current", false, "Switch to this connection after saving")
 	cmd.Flags().BoolVar(&opts.noPrompt, "no-prompt", false, "Disable interactive prompts; requires all flags to be set")
+	cmd.Flags().StringVar(&opts.secret, "secret", "", "Secret credential (password or PAT) to store with the connection")
 
 	return cmd
 }
@@ -62,6 +63,7 @@ type setConnectionOptions struct {
 	authMethod  string
 	makeCurrent bool
 	noPrompt    bool
+	secret      string
 }
 
 func (o *setConnectionOptions) run(cmd *cobra.Command, args []string) error {
@@ -138,10 +140,11 @@ func (o *setConnectionOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	secret, err := o.resolveAuthSecret(cmd, ctx.AuthMethod)
+	secret, err := o.resolveAuthSecret(cmd, ctx.AuthMethod, ctx.Secret, interactive)
 	if err != nil {
 		return err
 	}
+	ctx.Secret = secret
 
 	name := providedName
 	if name == "" {
@@ -160,7 +163,7 @@ func (o *setConnectionOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	ctx.Name = name
-	ts, err := testConnectionFn(cmd.Context(), ctx, secret)
+	ts, err := testConnectionFn(cmd.Context(), ctx)
 	if err != nil {
 		return fmt.Errorf("connection validation failed: %w", err)
 	}
@@ -232,14 +235,40 @@ func (o *setConnectionOptions) resolveAuthMethod(cmd *cobra.Command, reader *buf
 	}
 }
 
-func (o *setConnectionOptions) resolveAuthSecret(cmd *cobra.Command, method string) (string, error) {
-	envVar := secretEnvVar(method)
-	secret := strings.TrimSpace(os.Getenv(envVar))
-	if secret == "" {
-		return "", fmt.Errorf("environment variable %s is not set; export it before configuring the connection", envVar)
+func (o *setConnectionOptions) resolveAuthSecret(cmd *cobra.Command, method, current string, interactive bool) (string, error) {
+	if cmd.Flags().Changed("secret") {
+		value := strings.TrimSpace(o.secret)
+		if value == "" {
+			return "", fmt.Errorf("--secret cannot be empty")
+		}
+		return value, nil
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "%s detected in environment; it will be used for this connection.\n", envVar)
-	return secret, nil
+
+	trimmedCurrent := strings.TrimSpace(current)
+	if interactive {
+		label := "Password"
+		if method == authMethodPAT {
+			label = "Personal access token"
+		}
+		allowEmpty := trimmedCurrent != ""
+		value, err := promptSecret(cmd, label, allowEmpty)
+		if err != nil {
+			return "", err
+		}
+		if value == "" && allowEmpty {
+			return trimmedCurrent, nil
+		}
+		if value == "" {
+			return "", fmt.Errorf("%s is required", label)
+		}
+		return value, nil
+	}
+
+	if trimmedCurrent != "" {
+		return trimmedCurrent, nil
+	}
+
+	return "", fmt.Errorf("secret is required; provide --secret when running non-interactively")
 }
 
 func promptString(cmd *cobra.Command, reader *bufio.Reader, label, defaultValue string, required bool) (string, error) {
@@ -271,11 +300,25 @@ func promptString(cmd *cobra.Command, reader *bufio.Reader, label, defaultValue 
 	}
 }
 
-func secretEnvVar(method string) string {
-	if method == authMethodPAT {
-		return "SNOWFLAKE_PAT"
+func promptSecret(cmd *cobra.Command, label string, allowEmpty bool) (string, error) {
+	input, ok := cmd.InOrStdin().(*os.File)
+	if !ok {
+		return "", fmt.Errorf("cannot prompt for %s without a terminal", strings.ToLower(label))
 	}
-	return "SNOWFLAKE_PASSWORD"
+	for {
+		fmt.Fprintf(cmd.OutOrStdout(), "%s: ", label)
+		data, err := term.ReadPassword(int(input.Fd()))
+		fmt.Fprintln(cmd.OutOrStdout())
+		if err != nil {
+			return "", err
+		}
+		value := strings.TrimSpace(string(data))
+		if value == "" && !allowEmpty {
+			fmt.Fprintln(cmd.OutOrStdout(), "This field is required.")
+			continue
+		}
+		return value, nil
+	}
 }
 
 func isInteractive(r io.Reader) bool {

@@ -44,7 +44,7 @@ func newCmdWithRuntime(rt *runtime.Runtime) (*cobra.Command, *bytes.Buffer) {
 
 func TestRunUseConnectionOutputsJSON(t *testing.T) {
 	rt := prepareRuntime(t, func(cfg *config.Config) {
-		cfg.SetContext("primary", &config.Context{Account: "acct", Role: "role", AuthMethod: "password"})
+		cfg.SetContext("primary", &config.Context{Account: "acct", Role: "role", AuthMethod: "password", Secret: "secret"})
 	})
 	cmd, buf := newCmdWithRuntime(rt)
 
@@ -71,8 +71,8 @@ func TestRunUseConnectionOutputsJSON(t *testing.T) {
 
 func TestRunSetDefaultConnection(t *testing.T) {
 	rt := prepareRuntime(t, func(cfg *config.Config) {
-		cfg.SetContext("one", &config.Context{Account: "acct1", AuthMethod: "password"})
-		cfg.SetContext("two", &config.Context{Account: "acct2", AuthMethod: "password"})
+		cfg.SetContext("one", &config.Context{Account: "acct1", AuthMethod: "password", Secret: "secret"})
+		cfg.SetContext("two", &config.Context{Account: "acct2", AuthMethod: "password", Secret: "secret"})
 		cfg.CurrentContext = "one"
 		cfg.DefaultContext = "one"
 	})
@@ -101,8 +101,8 @@ func TestRunSetDefaultConnection(t *testing.T) {
 
 func TestRunListConnectionsJSON(t *testing.T) {
 	rt := prepareRuntime(t, func(cfg *config.Config) {
-		cfg.SetContext("one", &config.Context{Account: "acct1", AuthMethod: "password"})
-		cfg.SetContext("two", &config.Context{Account: "acct2", AuthMethod: "password"})
+		cfg.SetContext("one", &config.Context{Account: "acct1", AuthMethod: "password", Secret: "secret"})
+		cfg.SetContext("two", &config.Context{Account: "acct2", AuthMethod: "password", Secret: "secret"})
 		cfg.CurrentContext = "one"
 		cfg.DefaultContext = "two"
 	})
@@ -136,21 +136,18 @@ func TestRunListConnectionsJSON(t *testing.T) {
 
 func TestConnectionTestOutputsJSON(t *testing.T) {
 	rt := prepareRuntime(t, func(cfg *config.Config) {
-		cfg.SetContext("one", &config.Context{Account: "acct", AuthMethod: "password"})
+		cfg.SetContext("one", &config.Context{Account: "acct", AuthMethod: "password", Secret: "secret"})
 		cfg.CurrentContext = "one"
 	})
 
 	orig := testConnectionFn
-	testConnectionFn = func(ctx context.Context, info *config.Context, secret string) (string, error) {
-		if secret != "secret" {
-			t.Fatalf("expected secret credential, got %s", secret)
+	testConnectionFn = func(ctx context.Context, info *config.Context) (string, error) {
+		if info.Secret != "secret" {
+			t.Fatalf("expected secret credential, got %s", info.Secret)
 		}
 		return "2025-01-01T00:00:00Z", nil
 	}
 	defer func() { testConnectionFn = orig }()
-
-	os.Setenv("SNOWFLAKE_PASSWORD", "secret")
-	t.Cleanup(func() { os.Unsetenv("SNOWFLAKE_PASSWORD") })
 
 	cmd, buf := newCmdWithRuntime(rt)
 	opts := &testOptions{setCurrent: true}
@@ -169,24 +166,21 @@ func TestConnectionTestOutputsJSON(t *testing.T) {
 
 func TestTestOptionsRunPromptsForConnection(t *testing.T) {
 	rt := prepareRuntime(t, func(cfg *config.Config) {
-		cfg.SetContext("alpha", &config.Context{Account: "acct", AuthMethod: "password"})
-		cfg.SetContext("beta", &config.Context{Account: "acct", AuthMethod: "password"})
+		cfg.SetContext("alpha", &config.Context{Account: "acct", AuthMethod: "password", Secret: "secret"})
+		cfg.SetContext("beta", &config.Context{Account: "acct", AuthMethod: "password", Secret: "secret"})
 	})
 
 	orig := testConnectionFn
-	testConnectionFn = func(ctx context.Context, info *config.Context, secret string) (string, error) {
+	testConnectionFn = func(ctx context.Context, info *config.Context) (string, error) {
 		if info.Name != "beta" {
 			t.Fatalf("expected beta selection, got %s", info.Name)
 		}
-		if secret != "secret" {
-			t.Fatalf("expected secret credential, got %s", secret)
+		if info.Secret != "secret" {
+			t.Fatalf("expected secret credential, got %s", info.Secret)
 		}
 		return "2025-01-01T00:00:00Z", nil
 	}
 	defer func() { testConnectionFn = orig }()
-
-	os.Setenv("SNOWFLAKE_PASSWORD", "secret")
-	t.Cleanup(func() { os.Unsetenv("SNOWFLAKE_PASSWORD") })
 
 	cmd, buf := newCmdWithRuntime(rt)
 	cmd.SetIn(strings.NewReader("2\n"))
@@ -219,10 +213,9 @@ func TestTestOptionsRunErrorsWhenSecretMissing(t *testing.T) {
 	})
 	cmd, _ := newCmdWithRuntime(rt)
 
-	os.Unsetenv("SNOWFLAKE_PASSWORD")
 	opts := &testOptions{}
 	err := opts.run(cmd, []string{"one"})
-	if err == nil || !strings.Contains(err.Error(), "SNOWFLAKE_PASSWORD") {
+	if err == nil || !strings.Contains(err.Error(), "no stored credential") {
 		t.Fatalf("expected missing credential error, got %v", err)
 	}
 }

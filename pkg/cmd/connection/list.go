@@ -30,7 +30,6 @@ type connectionView struct {
 	Database    string `json:"database,omitempty"`
 	Schema      string `json:"schema,omitempty"`
 	Description string `json:"description,omitempty"`
-	AuthMethod  string `json:"authMethod,omitempty"`
 }
 
 func runListConnections(cmd *cobra.Command) error {
@@ -57,7 +56,6 @@ func runListConnections(cmd *cobra.Command) error {
 			Database:    ctx.Database,
 			Schema:      ctx.Schema,
 			Description: ctx.Description,
-			AuthMethod:  ctx.AuthMethod,
 		})
 	}
 

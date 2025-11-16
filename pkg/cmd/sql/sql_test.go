@@ -19,7 +19,7 @@ func prepareSQLRuntime(t *testing.T) *runtime.Runtime {
 	t.Cleanup(func() { os.Unsetenv("HOME") })
 
 	cfg := config.DefaultConfig()
-	cfg.SetContext("primary", &config.Context{Account: "acct", AuthMethod: "password"})
+	cfg.SetContext("primary", &config.Context{Account: "acct", AuthMethod: "password", Secret: "secret"})
 	if err := config.Save(cfg); err != nil {
 		t.Fatalf("save config: %v", err)
 	}
@@ -34,16 +34,16 @@ func TestSQLCommandOutputsJSON(t *testing.T) {
 	rt := prepareSQLRuntime(t)
 
 	orig := runQueryFn
-	runQueryFn = func(ctx context.Context, info *config.Context, secret, stmt string) ([]map[string]any, error) {
+	runQueryFn = func(ctx context.Context, info *config.Context, stmt string) ([]map[string]any, error) {
 		if stmt != "select 1" {
 			t.Fatalf("expected statement select 1, got %s", stmt)
+		}
+		if info.Secret != "secret" {
+			t.Fatalf("expected stored secret, got %s", info.Secret)
 		}
 		return []map[string]any{{"COL1": float64(1)}}, nil
 	}
 	defer func() { runQueryFn = orig }()
-
-	os.Setenv("SNOWFLAKE_PASSWORD", "secret")
-	t.Cleanup(func() { os.Unsetenv("SNOWFLAKE_PASSWORD") })
 
 	cmd := NewSQLCmd()
 	buf := &bytes.Buffer{}

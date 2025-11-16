@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/snowflakedb/gosnowflake"
@@ -17,9 +18,12 @@ var (
 	openFunc = sql.Open
 )
 
-// TestConnection attempts to connect to Snowflake using the provided connection info and secret.
+// TestConnection attempts to connect to Snowflake using the provided connection info.
 // It returns the server's CURRENT_TIMESTAMP upon success.
-func TestConnection(ctx context.Context, info *config.Context, secret string) (string, error) {
+func TestConnection(ctx context.Context, info *config.Context) (string, error) {
+	if info == nil {
+		return "", fmt.Errorf("connection info is required")
+	}
 	cfg := &gosnowflake.Config{
 		Account:   info.Account,
 		User:      info.User,
@@ -29,12 +33,11 @@ func TestConnection(ctx context.Context, info *config.Context, secret string) (s
 		Schema:    info.Schema,
 	}
 
-	switch info.AuthMethod {
-	case "pat":
-		cfg.Password = secret
-	default:
-		cfg.Password = secret
+	secret := strings.TrimSpace(info.Secret)
+	if secret == "" {
+		return "", fmt.Errorf("connection %q has no stored credential", info.Name)
 	}
+	cfg.Password = secret
 
 	dsn, err := dsnFunc(cfg)
 	if err != nil {
@@ -63,7 +66,10 @@ func TestConnection(ctx context.Context, info *config.Context, secret string) (s
 }
 
 // RunQuery executes the provided SQL and returns rows as maps.
-func RunQuery(ctx context.Context, info *config.Context, secret, stmt string) ([]map[string]any, error) {
+func RunQuery(ctx context.Context, info *config.Context, stmt string) ([]map[string]any, error) {
+	if info == nil {
+		return nil, fmt.Errorf("connection info is required")
+	}
 	cfg := &gosnowflake.Config{
 		Account:   info.Account,
 		User:      info.User,
@@ -73,12 +79,11 @@ func RunQuery(ctx context.Context, info *config.Context, secret, stmt string) ([
 		Schema:    info.Schema,
 	}
 
-	switch info.AuthMethod {
-	case "pat":
-		cfg.Password = secret
-	default:
-		cfg.Password = secret
+	secret := strings.TrimSpace(info.Secret)
+	if secret == "" {
+		return nil, fmt.Errorf("connection %q has no stored credential", info.Name)
 	}
+	cfg.Password = secret
 
 	dsn, err := dsnFunc(cfg)
 	if err != nil {

@@ -34,7 +34,7 @@ func TestTestConnectionReturnsServerTime(t *testing.T) {
 	mock.ExpectPing()
 	mock.ExpectQuery("select current_timestamp\\(\\)").WillReturnRows(sqlmock.NewRows([]string{"CURRENT_TIMESTAMP"}).AddRow("2025-01-01T00:00:00Z"))
 
-	ts, err := TestConnection(context.Background(), &config.Context{AuthMethod: "password"}, "secret")
+	ts, err := TestConnection(context.Background(), &config.Context{AuthMethod: "password", Secret: "secret"})
 	if err != nil {
 		t.Fatalf("TestConnection: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestRunQueryReturnsRows(t *testing.T) {
 
 	mock.ExpectQuery("select 1").WillReturnRows(sqlmock.NewRows([]string{"COL1"}).AddRow(1))
 
-	rows, err := RunQuery(context.Background(), &config.Context{AuthMethod: "pat"}, "secret", "select 1")
+	rows, err := RunQuery(context.Background(), &config.Context{AuthMethod: "pat", Secret: "secret"}, "select 1")
 	if err != nil {
 		t.Fatalf("RunQuery: %v", err)
 	}

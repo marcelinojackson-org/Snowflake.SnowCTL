@@ -24,6 +24,7 @@ type Context struct {
 	Schema      string `toml:"schema,omitempty"`
 	Description string `toml:"description,omitempty"`
 	AuthMethod  string `toml:"authMethod,omitempty"`
+	Secret      string `toml:"secret,omitempty"`
 }
 
 // Config describes the snowctl configuration schema.
