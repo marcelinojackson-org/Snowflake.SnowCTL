@@ -44,14 +44,6 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
 	rootCmd.PersistentFlags().StringVarP(&connectionOverride, "connection", "c", "", "Snowflake connection to use (overrides the current connection)")
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "json", "Output format. Supported: json")
-	rootCmd.Flags().BoolP("version", "v", false, "Show version")
-	rootCmd.PreRun = func(cmd *cobra.Command, args []string) {
-		if showVersion, _ := cmd.Flags().GetBool("version"); showVersion {
-			fmt.Fprintln(cmd.OutOrStdout(), build.Version)
-			os.Exit(0)
-		}
-	}
-
 	rootCmd.AddCommand(
 		connectioncmd.NewConnectionCmd(),
 		sqlcmd.NewSQLCmd(),
@@ -107,10 +99,10 @@ func printRootHelp(cmd *cobra.Command) {
 
 	fmt.Fprintln(out, "Flags:")
 	flags := []string{
-		"-h, --help        Show help",
-		"--version         Show version",
-		"-c, --connection  Use a connection",
-		"-o, --output      Output format",
+		"-h, --help         Show help",
+		"-v, --version      Show version",
+		"-c, --connection   Use a connection",
+		"-o, --output       Output format",
 	}
 	for _, f := range flags {
 		fmt.Fprintf(out, "  %s\n", f)
