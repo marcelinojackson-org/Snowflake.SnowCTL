@@ -55,8 +55,8 @@ func TestRunUseConnectionOutputsJSON(t *testing.T) {
 	if err := json.Unmarshal(buf.Bytes(), &payload); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if payload["current"] != "primary" {
-		t.Fatalf("expected current primary, got %v", payload["current"])
+	if payload["connection"] != "primary" {
+		t.Fatalf("expected connection primary, got %v", payload["connection"])
 	}
 
 	reloaded, err := config.Load()

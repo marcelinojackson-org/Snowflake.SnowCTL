@@ -25,13 +25,15 @@ func NewRuntime(contextOverride, output string) (*Runtime, error) {
 		return nil, err
 	}
 
-    normalizedOutput := strings.ToLower(output)
-    if normalizedOutput == "" {
-        normalizedOutput = "json"
-    }
-    if normalizedOutput != "json" {
-        return nil, fmt.Errorf("output format %q not supported; use json", output)
-    }
+	normalizedOutput := strings.ToLower(output)
+	if normalizedOutput == "" {
+		normalizedOutput = "json"
+	}
+	switch normalizedOutput {
+	case "json", "yaml", "csv", "tsv":
+	default:
+		return nil, fmt.Errorf("unsupported output format %q (supported: json, yaml, csv, tsv)", output)
+	}
 
 	ctxName := contextOverride
 	if ctxName == "" {

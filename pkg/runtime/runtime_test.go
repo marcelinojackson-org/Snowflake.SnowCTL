@@ -36,8 +36,8 @@ func TestNewRuntimeDefaultsToJson(t *testing.T) {
 
 func TestNewRuntimeInvalidOutput(t *testing.T) {
 	setupConfig(t)
-	if _, err := NewRuntime("", "yaml"); err == nil {
-		t.Fatalf("expected error for non-json output")
+	if _, err := NewRuntime("", "invalid"); err == nil {
+		t.Fatalf("expected error for invalid output format")
 	}
 }
 

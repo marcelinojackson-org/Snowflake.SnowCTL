@@ -1,13 +1,13 @@
 package sqlcmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/output"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -51,19 +51,12 @@ func (o *sqlOptions) run(cmd *cobra.Command) error {
 		return fmt.Errorf("query failed: %w", err)
 	}
 
-	payload := struct {
-		Connection string           `json:"connection"`
-		Statement  string           `json:"statement"`
-		Rows       []map[string]any `json:"rows"`
-	}{
-		Connection: ctx.Name,
-		Statement:  stmt,
-		Rows:       rows,
+	resp := map[string]any{
+		"connection": ctx.Name,
+		"statement":  stmt,
+		"rows":       rows,
 	}
-
-	enc := json.NewEncoder(cmd.OutOrStdout())
-	enc.SetIndent("", "  ")
-	return enc.Encode(payload)
+	return output.Print(cmd, resp)
 }
 
 func secretEnvVar(method string) string {

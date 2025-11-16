@@ -1,10 +1,9 @@
 package connectioncmd
 
 import (
-	"encoding/json"
-
 	"github.com/spf13/cobra"
 
+	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/output"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -62,7 +61,5 @@ func runListConnections(cmd *cobra.Command) error {
 		})
 	}
 
-	enc := json.NewEncoder(cmd.OutOrStdout())
-	enc.SetIndent("", "  ")
-	return enc.Encode(views)
+	return output.Print(cmd, views)
 }

@@ -1,12 +1,12 @@
 package connectioncmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
+	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/output"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -38,14 +38,9 @@ func runSetDefaultConnection(cmd *cobra.Command, name string) error {
 		return err
 	}
 
-	payload := map[string]any{
-		"default": name,
-	}
+	resp := map[string]any{"default": name}
 	if rt.Config.CurrentContext == name {
-		payload["current"] = name
+		resp["current"] = name
 	}
-
-	enc := json.NewEncoder(cmd.OutOrStdout())
-	enc.SetIndent("", "  ")
-	return enc.Encode(payload)
+	return output.Print(cmd, resp)
 }

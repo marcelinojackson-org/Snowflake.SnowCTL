@@ -1,12 +1,12 @@
 package connectioncmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
+	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/output"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -43,14 +43,11 @@ func runUseConnection(cmd *cobra.Command, name string) error {
 	if err := config.Save(rt.Config); err != nil {
 		return err
 	}
-	payload := map[string]string{
-		"current": name,
-		"account": ctx.Account,
-		"role":    ctx.Role,
-	}
-	enc := json.NewEncoder(cmd.OutOrStdout())
-	enc.SetIndent("", "  ")
-	return enc.Encode(payload)
+	return output.Print(cmd, map[string]string{
+		"connection": name,
+		"account":    ctx.Account,
+		"role":       ctx.Role,
+	})
 }
 
 func init() {}

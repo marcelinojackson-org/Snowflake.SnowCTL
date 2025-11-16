@@ -12,6 +12,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
+	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/output"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -173,12 +174,13 @@ func (o *setConnectionOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if o.makeCurrent {
-		fmt.Fprintf(cmd.OutOrStdout(), "Connection %q saved to %s and activated. Server time %s\n", name, connectionsLocation(), ts)
-	} else {
-		fmt.Fprintf(cmd.OutOrStdout(), "Connection %q saved to %s. Server time %s\n", name, connectionsLocation(), ts)
+	resp := map[string]any{
+		"connection": name,
+		"savedAt":    connectionsLocation(),
+		"serverTime": ts,
+		"activated":  o.makeCurrent,
 	}
-	return nil
+	return output.Print(cmd, resp)
 }
 
 func (o *setConnectionOptions) valueOrPrompt(cmd *cobra.Command, reader *bufio.Reader, label, current, flagValue, flagName, envValue string, required bool, interactive bool) (string, error) {

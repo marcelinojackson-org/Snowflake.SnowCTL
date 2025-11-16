@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
+	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/output"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -34,6 +35,8 @@ func runRemoveConnection(cmd *cobra.Command, name string) error {
 	if err := config.Save(rt.Config); err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Connection %q deleted.\n", name)
-	return nil
+	return output.Print(cmd, map[string]string{
+		"connection": name,
+		"status":     "deleted",
+	})
 }

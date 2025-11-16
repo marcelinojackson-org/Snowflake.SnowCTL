@@ -2,7 +2,6 @@ package connectioncmd
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
+	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/output"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -82,7 +82,7 @@ func (o *testOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("connection failed: %w", err)
 	}
 
-	result := map[string]any{
+	resp := map[string]any{
 		"connection": name,
 		"account":    connection.Account,
 		"user":       connection.User,
@@ -96,12 +96,10 @@ func (o *testOptions) run(cmd *cobra.Command, args []string) error {
 		if err := config.Save(rt.Config); err != nil {
 			return fmt.Errorf("failed to update current connection: %w", err)
 		}
-		result["currentSet"] = true
+		resp["currentSet"] = true
 	}
 
-	enc := json.NewEncoder(cmd.OutOrStdout())
-	enc.SetIndent("", "  ")
-	return enc.Encode(result)
+	return output.Print(cmd, resp)
 }
 
 func promptConnectionSelection(cmd *cobra.Command, contexts []*config.Context) (*config.Context, error) {
