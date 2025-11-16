@@ -9,6 +9,7 @@ import (
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/build"
 	connectioncmd "github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/cmd/connection"
+	sqlcmd "github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/cmd/sql"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
 
@@ -44,6 +45,7 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(
 		connectioncmd.NewConnectionCmd(),
+		sqlcmd.NewSQLCmd(),
 	)
 
 	rootCmd.AddCommand(newCompletionCmd(rootCmd))

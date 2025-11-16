@@ -1,6 +1,7 @@
 package connectioncmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -14,7 +15,14 @@ func newUseConnectionCmd() *cobra.Command {
 		Use:     "use NAME",
 		Aliases: []string{"activate"},
 		Short:   "Switch the current connection",
-		Args:    cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return fmt.Errorf("accepts 1 argument (connection name). Example: 'snowctl connection use HRAnalystics_Connection'")
+			}
+			return nil
+		},
+		Example: `# Switch to a specific connection by name
+snowctl connection use HRAnalystics_Connection`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUseConnection(cmd, args[0])
 		},
@@ -35,6 +43,14 @@ func runUseConnection(cmd *cobra.Command, name string) error {
 	if err := config.Save(rt.Config); err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Now using connection %q (account=%s, role=%s).\n", name, ctx.Account, ctx.Role)
-	return nil
+	payload := map[string]string{
+		"current": name,
+		"account": ctx.Account,
+		"role":    ctx.Role,
+	}
+	enc := json.NewEncoder(cmd.OutOrStdout())
+	enc.SetIndent("", "  ")
+	return enc.Encode(payload)
 }
+
+func init() {}
