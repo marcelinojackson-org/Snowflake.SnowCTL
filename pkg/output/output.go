@@ -38,14 +38,22 @@ func Print(cmd *cobra.Command, data interface{}) error {
 		_, err = out.Write([]byte("\n"))
 		return err
 	case "csv":
-		records, err := normalizeRecords(data)
+		meta, primary := splitMetadata(data)
+		records, err := normalizeRecords(primary)
 		if err != nil {
+			return err
+		}
+		if err := writeMetadata(out, meta); err != nil {
 			return err
 		}
 		return writeSeparated(out, records, ',')
 	case "tsv":
-		records, err := normalizeRecords(data)
+		meta, primary := splitMetadata(data)
+		records, err := normalizeRecords(primary)
 		if err != nil {
+			return err
+		}
+		if err := writeMetadata(out, meta); err != nil {
 			return err
 		}
 		return writeSeparated(out, records, '\t')
@@ -64,6 +72,42 @@ func normalizeRecords(data interface{}) ([]map[string]any, error) {
 		return nil, err
 	}
 	return flattenAny(anyData)
+}
+
+func splitMetadata(data interface{}) (map[string]any, interface{}) {
+	switch v := data.(type) {
+	case map[string]any:
+		return extractMetadata(v)
+	default:
+		return nil, data
+	}
+}
+
+func extractMetadata(m map[string]any) (map[string]any, interface{}) {
+	if rows, ok := m["rows"]; ok {
+		meta := copyMap(m)
+		delete(meta, "rows")
+		if len(meta) == 0 {
+			meta = nil
+		}
+		return meta, rows
+	}
+	return nil, m
+}
+
+func writeMetadata(out io.Writer, meta map[string]any) error {
+	if meta == nil || len(meta) == 0 {
+		return nil
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(meta); err != nil {
+		return err
+	}
+	if _, err := out.Write([]byte("\n")); err != nil {
+		return err
+	}
+	return nil
 }
 
 func flattenAny(value interface{}) ([]map[string]any, error) {
