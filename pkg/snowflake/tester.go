@@ -12,6 +12,11 @@ import (
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
 )
 
+var (
+	dsnFunc  = gosnowflake.DSN
+	openFunc = sql.Open
+)
+
 // TestConnection attempts to connect to Snowflake using the provided connection info and secret.
 // It returns the server's CURRENT_TIMESTAMP upon success.
 func TestConnection(ctx context.Context, info *config.Context, secret string) (string, error) {
@@ -31,12 +36,12 @@ func TestConnection(ctx context.Context, info *config.Context, secret string) (s
 		cfg.Password = secret
 	}
 
-	dsn, err := gosnowflake.DSN(cfg)
+	dsn, err := dsnFunc(cfg)
 	if err != nil {
 		return "", fmt.Errorf("build DSN: %w", err)
 	}
 
-	db, err := sql.Open("snowflake", dsn)
+	db, err := openFunc("snowflake", dsn)
 	if err != nil {
 		return "", fmt.Errorf("open connection: %w", err)
 	}
@@ -75,12 +80,12 @@ func RunQuery(ctx context.Context, info *config.Context, secret, stmt string) ([
 		cfg.Password = secret
 	}
 
-	dsn, err := gosnowflake.DSN(cfg)
+	dsn, err := dsnFunc(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("build DSN: %w", err)
 	}
 
-	db, err := sql.Open("snowflake", dsn)
+	db, err := openFunc("snowflake", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open connection: %w", err)
 	}
