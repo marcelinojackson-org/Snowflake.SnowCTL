@@ -51,10 +51,14 @@ func (o *sqlOptions) run(cmd *cobra.Command) error {
 		return fmt.Errorf("query failed: %w", err)
 	}
 
-	payload := map[string]any{
-		"connection": ctx.Name,
-		"statement":  stmt,
-		"rows":       rows,
+	payload := struct {
+		Connection string           `json:"connection"`
+		Statement  string           `json:"statement"`
+		Rows       []map[string]any `json:"rows"`
+	}{
+		Connection: ctx.Name,
+		Statement:  stmt,
+		Rows:       rows,
 	}
 
 	enc := json.NewEncoder(cmd.OutOrStdout())
