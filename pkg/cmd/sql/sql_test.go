@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/config"
@@ -52,6 +53,17 @@ func TestSQLCommandOutputsJSON(t *testing.T) {
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("execute: %v", err)
+	}
+
+	jsonOutput := buf.String()
+	stmtIdx := strings.Index(jsonOutput, "\"statement\"")
+	connIdx := strings.Index(jsonOutput, "\"connection\"")
+	rowsIdx := strings.Index(jsonOutput, "\"rows\"")
+	if stmtIdx == -1 || connIdx == -1 || rowsIdx == -1 {
+		t.Fatalf("expected statement, connection, and rows fields in output: %s", jsonOutput)
+	}
+	if !(connIdx < stmtIdx && stmtIdx < rowsIdx) {
+		t.Fatalf("fields not ordered correctly: %s", jsonOutput)
 	}
 
 	var payload struct {

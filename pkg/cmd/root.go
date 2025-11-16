@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -64,8 +65,9 @@ func NewRootCmd() *cobra.Command {
 
 // Execute runs the root snowctl command.
 func Execute() {
-	if err := NewRootCmd().Execute(); err != nil {
-		payload := map[string]string{"error": err.Error()}
+	root := NewRootCmd()
+	if err := root.Execute(); err != nil {
+		payload := formatExecutionError(err, root.CommandPath())
 		data, marshalErr := json.MarshalIndent(payload, "", "  ")
 		if marshalErr != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -106,4 +108,40 @@ func printRootHelp(cmd *cobra.Command) {
 	for _, f := range flags {
 		fmt.Fprintf(out, "  %s\n", f)
 	}
+}
+
+func formatExecutionError(err error, commandPath string) map[string]string {
+	payload := map[string]string{"error": err.Error()}
+	if hint := hintForError(err, commandPath); hint != "" {
+		payload["hint"] = hint
+	}
+	return payload
+}
+
+func hintForError(err error, commandPath string) string {
+	msg := err.Error()
+	if unknownCmd, ok := parseUnknownCommand(msg); ok {
+		if unknownCmd == "version" {
+			return fmt.Sprintf("Use '%s --version' to print the CLI version.", commandPath)
+		}
+		return fmt.Sprintf("Run '%s --help' to see available commands.", commandPath)
+	}
+	return ""
+}
+
+func parseUnknownCommand(msg string) (string, bool) {
+	const prefix = "unknown command "
+	if !strings.HasPrefix(msg, prefix) {
+		return "", false
+	}
+	start := strings.Index(msg, "\"")
+	if start == -1 {
+		return "", false
+	}
+	rest := msg[start+1:]
+	end := strings.Index(rest, "\"")
+	if end == -1 {
+		return "", false
+	}
+	return rest[:end], true
 }

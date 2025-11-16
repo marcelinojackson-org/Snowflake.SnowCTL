@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -43,5 +44,30 @@ func TestPrintRootHelpIncludesSections(t *testing.T) {
 	}
 	if !strings.Contains(output, "Commands:") {
 		t.Fatalf("expected Commands section")
+	}
+}
+
+func TestHintForUnknownVersionCommand(t *testing.T) {
+	err := errors.New(`unknown command "version" for "snowctl"`)
+	hint := hintForError(err, "snowctl")
+	expected := "Use 'snowctl --version' to print the CLI version."
+	if hint != expected {
+		t.Fatalf("expected %q, got %q", expected, hint)
+	}
+}
+
+func TestHintForUnknownCommandDefaultsToHelp(t *testing.T) {
+	err := errors.New(`unknown command "versoin" for "snowctl"`)
+	hint := hintForError(err, "./snowctl")
+	expected := "Run './snowctl --help' to see available commands."
+	if hint != expected {
+		t.Fatalf("expected %q, got %q", expected, hint)
+	}
+}
+
+func TestHintForErrorWithoutUnknownCommand(t *testing.T) {
+	err := errors.New("some other failure")
+	if hint := hintForError(err, "snowctl"); hint != "" {
+		t.Fatalf("expected empty hint, got %q", hint)
 	}
 }

@@ -62,6 +62,11 @@ func Print(cmd *cobra.Command, data interface{}) error {
 	}
 }
 
+// MetadataProvider allows callers to supply metadata separate from rows.
+type MetadataProvider interface {
+	OutputMetadata() (interface{}, interface{})
+}
+
 func normalizeRecords(data interface{}) ([]map[string]any, error) {
 	raw, err := json.Marshal(data)
 	if err != nil {
@@ -74,7 +79,10 @@ func normalizeRecords(data interface{}) ([]map[string]any, error) {
 	return flattenAny(anyData)
 }
 
-func splitMetadata(data interface{}) (map[string]any, interface{}) {
+func splitMetadata(data interface{}) (interface{}, interface{}) {
+	if provider, ok := data.(MetadataProvider); ok {
+		return provider.OutputMetadata()
+	}
 	switch v := data.(type) {
 	case map[string]any:
 		return extractMetadata(v)
@@ -95,8 +103,11 @@ func extractMetadata(m map[string]any) (map[string]any, interface{}) {
 	return nil, m
 }
 
-func writeMetadata(out io.Writer, meta map[string]any) error {
-	if meta == nil || len(meta) == 0 {
+func writeMetadata(out io.Writer, meta interface{}) error {
+	if meta == nil {
+		return nil
+	}
+	if m, ok := meta.(map[string]any); ok && len(m) == 0 {
 		return nil
 	}
 	enc := json.NewEncoder(out)

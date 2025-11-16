@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -163,5 +164,127 @@ func TestConnectionTestOutputsJSON(t *testing.T) {
 	}
 	if payload["currentSet"] != true {
 		t.Fatalf("expected currentSet true, got %v", payload["currentSet"])
+	}
+}
+
+func TestTestOptionsRunPromptsForConnection(t *testing.T) {
+	rt := prepareRuntime(t, func(cfg *config.Config) {
+		cfg.SetContext("alpha", &config.Context{Account: "acct", AuthMethod: "password"})
+		cfg.SetContext("beta", &config.Context{Account: "acct", AuthMethod: "password"})
+	})
+
+	orig := testConnectionFn
+	testConnectionFn = func(ctx context.Context, info *config.Context, secret string) (string, error) {
+		if info.Name != "beta" {
+			t.Fatalf("expected beta selection, got %s", info.Name)
+		}
+		if secret != "secret" {
+			t.Fatalf("expected secret credential, got %s", secret)
+		}
+		return "2025-01-01T00:00:00Z", nil
+	}
+	defer func() { testConnectionFn = orig }()
+
+	os.Setenv("SNOWFLAKE_PASSWORD", "secret")
+	t.Cleanup(func() { os.Unsetenv("SNOWFLAKE_PASSWORD") })
+
+	cmd, buf := newCmdWithRuntime(rt)
+	cmd.SetIn(strings.NewReader("2\n"))
+
+	opts := &testOptions{}
+	if err := opts.run(cmd, nil); err != nil {
+		t.Fatalf("testOptions.run: %v", err)
+	}
+
+	var payload map[string]any
+	raw := buf.String()
+	start := strings.Index(raw, "{")
+	if start == -1 {
+		t.Fatalf("expected JSON output, got %q", raw)
+	}
+	if err := json.Unmarshal([]byte(raw[start:]), &payload); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if payload["connection"] != "beta" {
+		t.Fatalf("expected beta, got %v", payload["connection"])
+	}
+	if payload["currentSet"].(bool) {
+		t.Fatalf("expected currentSet false, got true")
+	}
+}
+
+func TestTestOptionsRunErrorsWhenSecretMissing(t *testing.T) {
+	rt := prepareRuntime(t, func(cfg *config.Config) {
+		cfg.SetContext("one", &config.Context{Account: "acct", AuthMethod: "password"})
+	})
+	cmd, _ := newCmdWithRuntime(rt)
+
+	os.Unsetenv("SNOWFLAKE_PASSWORD")
+	opts := &testOptions{}
+	err := opts.run(cmd, []string{"one"})
+	if err == nil || !strings.Contains(err.Error(), "SNOWFLAKE_PASSWORD") {
+		t.Fatalf("expected missing credential error, got %v", err)
+	}
+}
+
+func TestTestOptionsRunErrorsWhenNoConnections(t *testing.T) {
+	rt := prepareRuntime(t, nil)
+	cmd, _ := newCmdWithRuntime(rt)
+	opts := &testOptions{}
+
+	err := opts.run(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), "no connections configured") {
+		t.Fatalf("expected missing connections error, got %v", err)
+	}
+}
+
+func TestPromptConnectionSelectionDefaultsToFirst(t *testing.T) {
+	contexts := []*config.Context{
+		{Name: "alpha"},
+		{Name: "beta"},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetIn(strings.NewReader("\n"))
+
+	selected, err := promptConnectionSelection(cmd, contexts)
+	if err != nil {
+		t.Fatalf("promptConnectionSelection: %v", err)
+	}
+	if selected.Name != "alpha" {
+		t.Fatalf("expected alpha, got %s", selected.Name)
+	}
+}
+
+func TestPromptConnectionSelectionByNumber(t *testing.T) {
+	contexts := []*config.Context{
+		{Name: "alpha"},
+		{Name: "beta"},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetIn(strings.NewReader("2\n"))
+
+	selected, err := promptConnectionSelection(cmd, contexts)
+	if err != nil {
+		t.Fatalf("promptConnectionSelection: %v", err)
+	}
+	if selected.Name != "beta" {
+		t.Fatalf("expected beta, got %s", selected.Name)
+	}
+}
+
+func TestPromptConnectionSelectionErrorsOnInvalidInput(t *testing.T) {
+	contexts := []*config.Context{
+		{Name: "alpha"},
+		{Name: "beta"},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetIn(strings.NewReader("gamma\n"))
+
+	_, err := promptConnectionSelection(cmd, contexts)
+	if err == nil || !strings.Contains(err.Error(), "connection \"gamma\" not found") {
+		t.Fatalf("expected not found error, got %v", err)
 	}
 }

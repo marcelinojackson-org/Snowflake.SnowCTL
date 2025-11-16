@@ -51,10 +51,10 @@ func (o *sqlOptions) run(cmd *cobra.Command) error {
 		return fmt.Errorf("query failed: %w", err)
 	}
 
-	resp := map[string]any{
-		"connection": ctx.Name,
-		"statement":  stmt,
-		"rows":       rows,
+	resp := queryResponse{
+		Statement:  stmt,
+		Connection: ctx.Name,
+		Rows:       rows,
 	}
 	return output.Print(cmd, resp)
 }
@@ -64,4 +64,23 @@ func secretEnvVar(method string) string {
 		return "SNOWFLAKE_PAT"
 	}
 	return "SNOWFLAKE_PASSWORD"
+}
+
+type queryResponse struct {
+	Connection string           `json:"connection" yaml:"connection"`
+	Statement  string           `json:"statement" yaml:"statement"`
+	Rows       []map[string]any `json:"rows" yaml:"rows"`
+}
+
+func (r queryResponse) OutputMetadata() (interface{}, interface{}) {
+	meta := responseMetadata{
+		Connection: r.Connection,
+		Statement:  r.Statement,
+	}
+	return meta, r.Rows
+}
+
+type responseMetadata struct {
+	Connection string `json:"connection" yaml:"connection"`
+	Statement  string `json:"statement" yaml:"statement"`
 }
