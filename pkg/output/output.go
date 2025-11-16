@@ -82,17 +82,16 @@ func flattenAny(value interface{}) ([]map[string]any, error) {
 		if rows, ok := v["rows"].([]interface{}); ok {
 			base := copyMap(v)
 			delete(base, "rows")
-			res := make([]map[string]any, 0, len(rows))
+			res := make([]map[string]any, 0, len(rows)+1)
+			if len(base) > 0 {
+				res = append(res, base)
+			}
 			for _, row := range rows {
 				m, err := toMap(row)
 				if err != nil {
 					return nil, err
 				}
-				merged := copyMap(base)
-				for k, val := range m {
-					merged[k] = val
-				}
-				res = append(res, merged)
+				res = append(res, m)
 			}
 			return res, nil
 		}
