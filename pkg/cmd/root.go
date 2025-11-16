@@ -11,6 +11,7 @@ import (
 
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/build"
 	connectioncmd "github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/cmd/connection"
+	showcmd "github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/cmd/show"
 	sqlcmd "github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/cmd/sql"
 	"github.com/Snowflake-Labs/Snowflake.SnowCTL/pkg/runtime"
 )
@@ -46,6 +47,7 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "json", "Output format. Supported: json")
 	rootCmd.AddCommand(
 		connectioncmd.NewConnectionCmd(),
+		showcmd.NewShowCmd(),
 		sqlcmd.NewSQLCmd(),
 	)
 

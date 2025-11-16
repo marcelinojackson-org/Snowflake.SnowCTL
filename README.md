@@ -107,6 +107,7 @@ Usage:
 Commands:
   completion   Generate shell completion scripts
   connection   Manage Snowflake connections
+  show         Display account/user/usage information
   sql          Execute SQL against the active connection
 
 Flags:
@@ -133,6 +134,44 @@ Flags:
 | `snowctl connection set-default NAME` | Change the default connection used when no current override exists. |
 | `snowctl connection remove NAME` | Delete a stored connection. |
 | `snowctl connection test [NAME]` | Validate connectivity, optionally selecting from a prompt when NAME is omitted. `--set-current` flips the connection on success. |
+
+### Account & usage insights
+
+`snowctl show account` displays a human-readable drilldown for the current connection:
+
+```
+$ snowctl show account --user marcelino_j --window 7
+
+Account summary
+
+Account:             SRSIBDN-URA06696
+Account URL:         https://srsibdn-ura06696.snowflakecomputing.com
+User:                marcelino_j
+Role:                ACCOUNTADMIN
+Window:              Last 7 days
+
+User profile:
+    Login name:          MARCELINO_J
+    Email:               marcelino@example.com
+    Created:             2024-08-02 11:05:12 PST
+    Last success login:  2024-08-09 14:47:21 PST
+    Disabled:            false
+
+Login activity:
+    Logins:              12
+    Last login:          2024-08-09 14:47:21 PST
+
+Query activity:
+    Queries:             63,831
+    Runtime:             9h 23m 12s
+    Bytes scanned:       744.23 GB
+
+Warehouse usage:
+  SIGMA_WH                   23,045 queries
+  SALESFORCE_INTEGRATION_WH   9,851 queries
+```
+
+Structured output (`--output json|yaml|csv|tsv`) is still available when you pass the flag.
 
 ### Running SQL
 
